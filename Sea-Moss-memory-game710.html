@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Sea Moss Baby Memory Game</title>
+  <style>
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      background: #e0f7fa;
+      font-family: Arial, sans-serif;
+    }
+    .memory-game {
+      width: 90vw;
+      max-width: 1000px;
+      display: flex;
+      flex-wrap: wrap;
+      perspective: 1000px;
+    }
+    .memory-card {
+      aspect-ratio: 2 / 3;
+      width: calc(12.5% - 10px);
+      margin: 5px;
+      position: relative;
+      transform: scale(1);
+      transform-style: preserve-3d;
+      transition: transform 0.5s;
+      cursor: pointer;
+    }
+    .memory-card.flip {
+      transform: rotateY(180deg);
+    }
+    .memory-card img {
+      width: 100%;
+      height: auto;
+      display: block;
+      position: absolute;
+      backface-visibility: hidden;
+      border-radius: 8px;
+    }
+    .front-face {
+      transform: rotateY(180deg);
+    }
+    .card-name {
+      position: absolute;
+      bottom: 5px;
+      left: 5px;
+      right: 5px;
+      text-align: center;
+      color: white;
+      font-weight: bold;
+      background: rgba(0, 0, 0, 0.5);
+      padding: 2px 5px;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      pointer-events: none;
+      backface-visibility: hidden;
+      transform: rotateY(180deg)
+    }
+    .memory-card.flip .card-name {
+      opacity: 1;
+    }
+        @media (max-width: 768px) {
+      .memory-card { width: calc(25% - 10px); }
+    }
+    @media (max-width: 480px) {
+      .memory-card { width: calc(33.333% - 10px); }
+    }
+  </style>
+</head>
+<body>
+  <section class="memory-game"></section>
+<div class="memory-card" data-name="${dataName}" aria-label="${displayName}">
+  <script>
+    const imageList = [
+      "Micki.png", "Poison.png", "Kwanza_the_First.png", "Ice_Cold.png", "Skai.png",
+      "B&W.png", "Phyllis_Cybin.png", "Pretty_Paula.png", "Lina_Limerick.png", "Orange_Youglad.png",
+      "Daisy.png", "Tania.png", "Money.png", "Golden_Gal.png", "Kiesha.png",
+      "Moon_Diamond.png", "Nature.png", "Town_Girl.png", "Sea_Moss_Lady.png", "Strawberry_Shorty.png",
+      "She_Hulk.png", "Ariel.png", "Gmama.png", "Grape_Grace.png", "Flow.png",
+      "Cloudy.png", "Ritual.png", "Chessica_Cake.png", "Tati.png", "Georgia_Peach.png",
+      "Mia.png", "Cream.png", "Fran.png"
+    ];
+
+    function getDisplayName(filename) {
+      return filename.replace(/\.png$/, '').replace(/_/g, ' ');
+    }
+
+    function getDataName(filename) {
+      return filename.replace(/\.png$/, '').replace(/_/g, '-').toLowerCase();
+    }
+
+      function shuffleArray(arr) {
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
+
+    function getRandomPairs(array, count) {
+      const copy = [...array];
+      shuffleArray(copy);
+      const selected = copy.slice(0, count);
+      const pairs = [...selected, ...selected];
+      return shuffleArray(pairs);
+    }
+
+    function createCardElement(filename) {
+      const displayName = getDisplayName(filename);
+      const dataName = getDataName(filename);
+      return `
+        <div class="memory-card" data-name="${dataName}">
+          <img class="front-face" src="img/${filename}" alt="${displayName}">
+          <img class="back-face" src="img/back-face.svg" alt="Back Face">
+          <div class="card-name">${displayName}</div>
+        </div>`;
+    }
+
+    function loadLevel1() {
+      const gameBoard = document.querySelector('.memory-game');
+      const cards = getRandomPairs(imageList, 9);
+      gameBoard.innerHTML = cards.map(createCardElement).join('');
+      initializeGameLogic();
+    }
+
+    function loadLevel(pairsCount = 9) {
+      const gameBoard = document.querySelector('.memory-game');
+      const cards = getRandomPairs(imageList, pairsCount);
+      gameBoard.innerHTML = cards.map(createCardElement).join('');
+      initializeGameLogic();
+    }
+
+    function initializeGameLogic() {
+      const cards = document.querySelectorAll('.memory-card');
+      let hasFlippedCard = false;
+      let lockBoard = false;
+      let firstCard, secondCard;
+
+      (function shuffle() {
+        cards.forEach(card => {
+          let randomPos = Math.floor(Math.random() * cards.length);
+          card.style.order = randomPos;
+        });
+      })();
+
+      cards.forEach(card => card.addEventListener('click', flipCard));
+
+      function flipCard() {
+        if (lockBoard || this === firstCard) return;
+        this.classList.add('flip');
+
+        if (!hasFlippedCard) {
+          hasFlippedCard = true;
+          firstCard = this;
+          return;
+        }
+
+        secondCard = this;
+        const Match = firstCard.dataset.name === secondCard.dataset.name;
+        Match ? disableCards() : unflipCards();
+      }
+
+      function disableCards() {
+        firstCard.removeEventListener('click', flipCard);
+        secondCard.removeEventListener('click', flipCard);
+        resetBoard();
+      }
+
+      function unflipCards() {
+        lockBoard = true;
+        setTimeout(() => {
+          firstCard.classList.remove('flip');
+          secondCard.classList.remove('flip');
+          resetBoard();
+        }, 1000);
+      }
+
+      function resetBoard() {
+        [hasFlippedCard, lockBoard] = [false, false];
+        [firstCard, secondCard] = [null, null];
+      }
+    }
+
+    window.onload = loadLevel1;
+  </script>
+</body>
+</html>
